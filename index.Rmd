@@ -1,0 +1,488 @@
+---
+title: "ENTREGA_FINAL:¿Que variables afectan la mortalidad adulta a nivel mundial?"
+author: 'Integrantes: Gabriel Riega (20195812) y Julio Castillo(20195972)'
+author1: "Jefe de práctica:Gabriel Ramos"
+author2: "Profesor: José Manuel Magallanes Reyes "
+date: '2023-1'
+subtitle: 'Curso: Estadística para el análisis político 2'
+output: rmdformats::readthedown
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning= F, message=F)
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+library(rmdformats)
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+library(rio)
+
+
+data = import("baselimpia.xlsx")
+
+str(data)
+
+names(data)
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data = na.omit(data)
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data[!complete.cases(data),"Country"]
+```
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data$Country =trimws(data$Country,which=c("right"),whitespace = "[\\h\\v]")
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data$country_code =trimws(data$country_code,which=c("right"),whitespace = "[\\h\\v]")
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+library(modelsummary)
+```
+
+# 1.Objetivo:
+
+El presente informe tiene como objetivo un análisis de correlación entre la mortalidad adulta que se establece como la variable dependiente con las siguientes variables independientes de 143 países en el año 2015:
+
+Variable Dependiente:
+
+-Tasa de Mortalidad adulta en ambos sexos(entre los 15 y 60 años por cada 1000 habitantes)
+
+variables Independientes:
+
+-Porcentaje de la población con acceso a una cobertura de seguro de salud universal (PercentageUHC)
+
+-Cantidad de profesionales de la salud por cada 10,000 habitantes(Medical_Doctors)
+
+-Porcentaje de la población con acceso a servicios de agua potable(Water_Percentage)
+
+-Porcentaje de consumo de litros de alcohol al año (total_litres_of_pure_alcohol)
+
+-Porcentaje del índice de Masa muscular (Bmi)
+
+-Porcentaje de consumo anual de azúcar en kilos (Sugar_and_sweetenersKg)
+
+-Porcentaje de consumo anual de productos de animales en kilos (Animal_productskg)
+
+Debemos aclarar que se entiende como mortalidad adulta lo siguiente:
+
+La mortalidad adulta se refiere al número de fallecimientos en la población adulta en un determinado período de tiempo. La Organización Mundial de la Salud (OMS) define la mortalidad adulta como la tasa de defunciones ocurridas en individuos de 15 años de edad o más, por cada 1,000 personas de la misma edad en la población durante un año determinado.
+
+
+# 2.Observamos la data:
+
+La siguiente data es una base de datos, producto de un merge de diferentes bases da datos obtenidas de Kaggler,OMS, Banco Mundial y otros. Además, las bases de Kaggler poseen diferentes recapitulaciones de bases de datos de organismos oficiales alrededor del mundo como los mencionados anteriormente. Se realizó diversos procesos de Merge, llegando a alcanzar hasta 444,000 observaciones para cerca de 2200 variables. 
+
+Se optó por tomar en cuenta el año 2015 por la gran cantidad de información que se obtuvó, además de que la mayor base de datos obtenida tuvo procedencia de la OMS, y este fue una de las bases más completas revisadas.
+
+Se realizó una ardua limpieza que concluyó en una data de 143 observaciones(países) con 9 variables utilizadas para esta investigación. El resto de variables que no se observan son referentes al año de la data (2015), al país y al código oficial del país.
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+str(data)
+```
+Aquí observaremos todas las variables mencionadas:
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+names(data)
+```
+
+# Regresión Lineal Múltiple
+
+Se optó por un modelo de Regresión lineal (Regresión Gaussiana) debido al tipo de variables que se utilizó, todas nuestras variables fueron de tipo numérico.
+
+Inicialmente se tomó en cuenta factores en común que compartan nuestras variables independientes  y concluimos que podían agruparse de la siguiente manera:
+
+Factores asociados a políticas públicas: Condiciones que están determinadas por instituciones del Estado. (PercentageUHC, Medical_Doctors, Water_Percentage)
+
+Factores asociados a patrones alimenticios: Condiciones que están determinadas por el propio individuo. (total_litres_of_pure_alcohol, Sugar_and_sweetenersKg, Bmi, Animal_productskg)
+Posteriormente, evaluaremos cada grupo con un determinado modelo de regresión lineal para identificar a las variables que tienen mayor influencia sobre la variable dependiente. 
+
+En la comparación de modelos de regresión en base a los grupos de variables mencionados anteriormente encontramos, como esperabamos, que los factores asociados a políticas públicas tenían mayor efecto en la variable dependiente. No obstante, por una cuestión de requisitos, tuvimos que modificar el modelo y se realizó el siguiente:
+
+Hipótesis Modelo1:
+
+H0: La mortalidad adulta es afectadad significativamente por el porcentaje de población asegurado, la cantidad de doctores por 1000 habitantes, la cantidad de azúcar por kilogramos consumida anualmente y la cantidad de proteína animal consumidad por kilogramos anualmente.
+
+Hipótesis Modelo2:
+
+H0: La mortalidad adulta esta afectada significativamente por la cantidad de alcohol consumida en litros, el índice de masa corporal, la cantidad de azúcarpor kilogramos consumida anualmente y la cantidad de proteína animal consumidad por kilogramos anualmente.
+
+```{r,eval=TRUE,message=FALSE,warning=FALSE}
+modelo1<-lm(adult_mortality ~ PercentageUHC + Medical_doctors + WaterPercentage+Sugar_and_SweetenersKg + Animal_ProductsKG, data)
+
+modelo2<-lm(adult_mortality ~ total_litres_of_pure_alcohol + bmi + Sugar_and_SweetenersKg + Animal_ProductsKG, data)
+
+
+models = list(modelo1,modelo2)
+modelsummary(models, output = "kableExtra")
+```
+
+
+En base al R2 Adj podemos mencionar que el Modelo 1 tiene mayor explicabilidad de la VD. Aún así, procederemos a realizar una comparación ANOVA para comprobar nuestra hipotesis. Este R2 Adj nos indica que este modelo explica en un 65% la VD.
+
+# Tabla ANOVA: Comparación de Modelos
+
+-Optamos por considera al Modelo 1, como el mejor para la explicación de nuestra VD.
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+library(magrittr)
+library(knitr)
+tanova=anova(modelo1,modelo2)
+tanova
+```
+
+
+
+# Modelo Estandarizado
+
+Observamos los coeficientes estandarizados para un mejor análisis del efecto de nuestras variables.
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+modelo2b=formula(scale(adult_mortality)~scale(PercentageUHC)+scale(Medical_doctors)+scale(WaterPercentage)+
+                   scale(Sugar_and_SweetenersKg)+scale(Animal_ProductsKG))
+
+reg2b=lm(modelo2b,data)
+
+model2b=list(reg2b)
+
+modelsummary(model2b, title = "Regresion: modelo con \ncoeficientes estandarizados",
+             stars = TRUE,
+             output = "kableExtra")
+```
+
+# Diagosticos de la Regresión:
+
+Revisamos los supuestos para comprobar la validez de nuestro modelo:
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+par(mfrow = c(2, 2))  
+plot(modelo1, 1,caption = '');title(main="Linealidad")
+plot(modelo1, 2, caption = '');title(main="Normalidad")
+plot(modelo1, 3, caption = '');title(main="Homocedasticidad")
+plot(modelo1, 5, caption = '');title(main="Influyentes")
+```
+Concluimos que todos los requisitos se cumplen, con excepción del requisito de Normalidad. Este requisito sirve dado que la normalidad nos ayuda a aplicar pruebas de validación global del modelo ANOVA. Realizamos una prueba de Shapiro-Test, y el resultado fue menor a 0,05; lo cual nos confirmó que no había normalidad.Se procedió a transformas la variables, aumentar variables y revisar constantemente la base de datos.
+
+No obstante, dado que los demás requisitos sí se cumplen, especialmente Linealidad, Homocedasticidad, Valores Influyentes y la No Multicolinealidad, procederemos a continuar con el modelo, puesto que la validez del mismo no se ve afectada. Aún así, es importante mencionar que dada la ausencia de normalidad, puede significar que este modelo no sirve para otro tipo de variables/efectos. 
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+summary(data[,-c(1,2,3)])
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+boxplot(data[,-c(1,2,3)],horizontal=T,las=2,cex.axis=0.3)
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+boxplot(scale(data[,-c(1,2,3)]),horizontal=T,las=2,cex.axis=0.3)
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+boxplot(log(data[,-c(1,2,3)]),horizontal=T,las=2,cex.axis=0.3)
+```
+
+# ANALISIS DE CONGLOMERADOS
+
+Las variables de nuestra base de datos, y por ende de nuestro modelo, tienen diferentes tendencias estadísticas. Dado que son variables muy diferentes, esto puede afectar nuestro analisis. Procederemos a estandarizar las variables para mejorar nuestro proceso de clusterización.
+
+Utilizaremos el método: standardize.
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+library(BBmisc)
+boxplot(normalize(data[,c(4:12)],method='standardize'))
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data[,c(4:12)]=normalize(data[,c(4:12)],method='standardize')
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+cor(data[,c(4:12)])
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+dataClus=data[,c(4:12)]
+row.names(dataClus)= data$Country
+```
+
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+library(cluster)
+g.dist = daisy(dataClus, metric="gower")
+```
+
+# Cantidad de Clusters: PAM
+
+Previamente se realizó un proceso de comparación de estrategias. Optamos por la estrategia de Partición por los resultados que explicaremos más adelante. 
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+## para PAM
+
+library(factoextra)
+fviz_nbclust(dataClus, pam,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F)
+```
+La tecnica nos propone 3 clusters.
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+set.seed(123)
+res.pam=pam(g.dist,3,cluster.only = F)
+
+#nueva columna
+dataClus$pam=res.pam$cluster
+
+# ver
+
+head(dataClus)
+```
+
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+fviz_silhouette(res.pam,print.summary = F)
+```
+
+Esta estrategia de cluster fue la que menos errores obtuvo, además de tener el mayor width.PAM obtuvo 6 errores que observamos a continuación:
+
+# DATOS MAL CLUSTERIZADOS VÍA PAM:
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+silPAM=data.frame(res.pam$silinfo$widths)
+silPAM$country=row.names(silPAM)
+poorPAM=silPAM[silPAM$sil_width<0,'country']%>%sort()
+poorPAM
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+aggregate(.~ pam, data=dataClus,mean)
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data$pampoor=data$Country%in%poorPAM
+data$pam=as.ordered(dataClus$pam)
+dataClus$pam=NULL
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+## PARA JERARQUICO
+
+fviz_nbclust(dataClus, hcut,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F,hc_func = "agnes")
+```
+
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+set.seed(123)
+library(factoextra)
+
+res.agnes<- hcut(g.dist, k = 6,hc_func='agnes',hc_method = "ward.D")
+
+dataClus$agnes=res.agnes$cluster
+
+# ver
+
+head(dataClus)
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+# Visualize
+fviz_dend(res.agnes, cex = 0.7, horiz = T,main = "")
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+fviz_silhouette(res.agnes,print.summary = F)
+```
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+silAGNES=data.frame(res.agnes$silinfo$widths)
+silAGNES$country=row.names(silAGNES)
+poorAGNES=silAGNES[silAGNES$sil_width<0,'country']%>%sort()
+poorAGNES
+```
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+aggregate(.~ agnes, data=dataClus,mean)
+```
+
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data$agnespoor=data$Country%in%poorAGNES
+data$agnes=as.ordered(dataClus$agnes)
+dataClus$agnes=NULL
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+## PARA JERARQUICO
+
+fviz_nbclust(dataClus, hcut,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F,hc_func = "diana")
+```
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+set.seed(123)
+res.diana <- hcut(g.dist, k = 3,hc_func='diana')
+dataClus$diana=res.diana$cluster
+# veamos
+head(dataClus)
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+fviz_silhouette(res.diana,print.summary = F)
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+silDIANA=data.frame(res.diana$silinfo$widths)
+silDIANA$country=row.names(silDIANA)
+poorDIANA=silDIANA[silDIANA$sil_width<0,'country']%>%sort()
+poorDIANA
+```
+
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data$dianapoor=data$Country%in%poorDIANA
+data$diana=as.ordered(dataClus$diana)
+dataClus$diana=NULL
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+# k es la cantidad de dimensiones
+proyeccion = cmdscale(g.dist, k=2,add = T) 
+head(proyeccion$points,143)
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+data$dim1 <- proyeccion$points[,1]
+data$dim2 <- proyeccion$points[,2]
+```
+
+# Gráfica de Clusters:
+
+Dando coordenadas a nuestros resultados:
+
+Trás la aplicación de una técnica multidimensional, observamos posiciones a partir de las distancias de los países.
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+library(ggrepel)
+base= ggplot(data,aes(x=dim1, y=dim2,label=row.names(dataClus))) 
+base + geom_text_repel(size=3, max.overlaps = 143,min.segment.length = unit(0, 'lines'))
+```
+
+
+# GRÁFICA DE PAM: 
+
+Se observan los países mal clusterizados.
+
+```{r,echo=FALSE, message=FALSE,warning=FALSE}
+PAMlabels=ifelse(data$pampoor,data$Country,'')
+
+#base
+base= ggplot(data,aes(x=dim1, y=dim2))  +
+    scale_color_brewer(type = 'qual',palette ='Dark2'  ) + labs(subtitle = "Se destacan los países mal clusterizados")
+
+pamPlot=base + geom_point(size=3, 
+                          aes(color=pam))  + 
+        labs(title = "PAM") 
+# hacer notorios los paises mal clusterizados
+pamPlot + geom_text_repel(size=4,
+                          aes(label=PAMlabels),
+                          max.overlaps = 143,
+                          min.segment.length = unit(0, 'lines'))
+
+
+```
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+# solo paises mal clusterizados
+AGNESlabels=ifelse(data$agnespoor,data$Country,'')
+
+agnesPlot=base + geom_point(size=3, 
+                            aes(color=as.factor(agnes))) +
+          labs(title = "AGNES") 
+# hacer notorios los paises mal clusterizados
+agnesPlot + geom_text_repel(size=4,
+                            aes(label=AGNESlabels),
+                            max.overlaps = 143,
+                            min.segment.length = unit(0, 'lines'))
+```
+
+
+```{r,include =FALSE,message=FALSE,warning=FALSE}
+# solo paises mal clusterizados
+DIANAlabels=ifelse(data$dianapoor,data$Country,'')
+
+dianaPlot=base + geom_point(size=3,
+                            aes(color=diana)) + 
+          labs(title = "DIANA")
+
+# hacer notorios los paises mal clusterizados
+dianaPlot + geom_text_repel(size=4,
+                            aes(label=DIANAlabels), 
+                            max.overlaps = 143,
+                            min.segment.length = unit(0, 'lines'))
+```
+
+# Bibliografía:
+
+Alex Teboul. (n.d.). Diabetes Health Indicators Dataset. Kaggle.  https://www.kaggle.com/datasets/alexteboul/diabetes-health-indicators-dataset
+
+
+Ben Coleman. (n.d.). Global Health Data Analysis. Kaggle.  https://www.kaggle.com/code/benbcoleman/global-health-data-analysis/input
+
+
+Daniel Evans. (n.d.). World Bank WDI-212: Health Systems. Kaggle.  https://www.kaggle.com/datasets/danevans/world-bank-wdi-212-health-systems
+
+
+Darshan Prabhu. (n.d.). Countries Economy (GDP and Everything). Kaggle.  https://www.kaggle.com/datasets/darshanprabhu09/countries-economy-gdp-and-everything
+
+
+Dmitry Azarov. (n.d.). Visualization and Mortality Prediction. Kaggle. https://www.kaggle.com/code/dmitryazarov/visualization-and-mortality-prediction
+
+
+Gabriel Luiz. (n.d.). Mortality Information System. Kaggle.  https://www.kaggle.com/datasets/gabrielluizone/mortality-information-system
+
+
+John Harshith. (n.d.). World Happiness Report 2021 & Worldwide Mortality. Kaggle. https://www.kaggle.com/datasets/johnharshith/world-happiness-report-2021-worldwide-mortality
+
+
+Kumar Rajarshi. (n.d.). Life Expectancy (WHO). Kaggle.  https://www.kaggle.com/datasets/kumarajarshi/life-expectancy-who
+
+
+Maria Ren. (n.d.). COVID-19 Healthy Diet Dataset. Kaggle.  https://www.kaggle.com/datasets/mariaren/covid19-healthy-diet-dataset?select=Food_Supply_Quantity_kg_Data.csv
+
+
+Marília Antunes. (n.d.). Rank MD. Kaggle.  https://www.kaggle.com/datasets/mpwolke/cusersmarildownloadsrankmdcsv
+
+
+Matt Mattson. (n.d.). WHO National Life Expectancy. Kaggle. https://www.kaggle.com/datasets/mmattson/who-national-life-expectancy/code
+
+
+MySar Ahmad Bhat. (n.d.). Alcohol Consumption. Kaggle.  https://www.kaggle.com/datasets/mysarahmadbhat/alcohol-consumption
+
+ORGANIZACIÓN MUNDIAL DE LA SALUD (OMS)
+2023    GHO | By category | Adult mortality - Data by country. Global Health Observatory Data Repository. Adult Mortality Data by Country.  https://apps.who.int/gho/data/view.main.1360?lang=en
+
+PsyCon. (n.d.). Population Estimates and Projections. Kaggle.m https://www.kaggle.com/datasets/psycon/population-estimates-and-projections
+
+
+University of Michigan. (n.d.). Sleep, Health, and Lifestyle Dataset. Kaggle.  https://www.kaggle.com/datasets/uom190346a/sleep-health-and-lifestyle-dataset
+
+
+
+
+
